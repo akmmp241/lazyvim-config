@@ -79,9 +79,6 @@ return {
   -- add tsserver and setup with typescript.nvim instead of lspconfig
   {
     "neovim/nvim-lspconfig",
-    config = function()
-      require("config.lspconfig")
-    end,
     dependencies = {
       "jose-elias-alvarez/typescript.nvim",
       init = function()
@@ -98,6 +95,43 @@ return {
       servers = {
         -- tsserver will be automatically installed with mason and loaded with lspconfig
         tsserver = {},
+        gopls = {
+          cmd = { "gopls" },
+          filetypes = { "go", "gomod", "gowork", "gotmpl" },
+          root_dir = function(fname)
+            return require("lspconfig.util").root_pattern("go.work", "go.mod", ".git")(fname)
+          end,
+          capabilities = vim.tbl_deep_extend(
+            "force",
+            vim.lsp.protocol.make_client_capabilities(),
+            require("cmp_nvim_lsp").default_capabilities()
+          ),
+
+          -- on_attach to configure keymaps etc.
+          on_attach = function(client, bufnr)
+            -- Example: enable formatting
+            client.server_capabilities.documentFormattingProvider = true
+
+            local map = function(mode, lhs, rhs, desc)
+              vim.keymap.set(mode, lhs, rhs, { buffer = bufnr, desc = desc })
+            end
+
+            map("n", "gd", vim.lsp.buf.definition, "Go to Definition")
+            map("n", "K", vim.lsp.buf.hover, "Hover Documentation")
+            -- Add more mappings as needed
+          end,
+          settings = {
+            gopls = {
+              completeUnimported = true,
+              usePlaceholders = true,
+              staticcheck = true,
+              analyses = {
+                unusedparams = true,
+                shadow = true,
+              },
+            },
+          },
+        },
       },
       -- you can do any additional lsp server setup here
       -- return true if you don't want this server to be setup with lspconfig
